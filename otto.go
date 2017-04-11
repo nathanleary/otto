@@ -227,6 +227,7 @@ package otto
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/robertkrimen/otto/file"
 	"github.com/robertkrimen/otto/registry"
@@ -234,6 +235,9 @@ import (
 
 // Otto is the representation of the JavaScript runtime. Each instance of Otto has a self-contained namespace.
 type Otto struct {
+	Hidden_global map[string]interface{}
+	CmdNum        int
+	Time          time.Time
 	// Interrupt is a channel for interrupting the runtime. You can use this to halt a long running execution, for example.
 	// See "Halting Problem" for more information.
 	Interrupt chan func()
@@ -305,15 +309,26 @@ func (self Otto) Run(src interface{}) (Value, error) {
 // already defined in the current stack frame. This is most useful in, for
 // example, a debugger call.
 func (self Otto) Eval(src interface{}) (Value, error) {
+	// wg := sync.WaitGroup{}
+	// wg.Add(1)
+	var value Value
+	var err error
+
+	//go func() {
+	//	defer wg.Done()
+
 	if self.runtime.scope == nil {
 		self.runtime.enterGlobalScope()
 		defer self.runtime.leaveScope()
 	}
 
-	value, err := self.runtime.cmpl_eval(src, nil)
+	value, err = self.runtime.cmpl_eval(src, nil)
 	if !value.safe() {
 		value = Value{}
 	}
+	//}()
+
+	//wg.Wait()
 	return value, err
 }
 

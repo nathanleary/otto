@@ -25,6 +25,7 @@ func (self *_runtime) toValueArray(arguments ...interface{}) []Value {
 
 	valueArray := make([]Value, length)
 	for index, value := range arguments {
+
 		valueArray[index] = self.toValue(value)
 	}
 
@@ -32,6 +33,8 @@ func (self *_runtime) toValueArray(arguments ...interface{}) []Value {
 }
 
 func stringToArrayIndex(name string) int64 {
+	//index, err := convert.Int64(name)
+
 	index, err := strconv.ParseInt(name, 10, 64)
 	if err != nil {
 		return -1
@@ -165,6 +168,7 @@ func throwHereBeDragons(arguments ...interface{}) {
 }
 
 func eachPair(list []interface{}, fn func(_0, _1 interface{})) {
+
 	for len(list) > 0 {
 		var _0, _1 interface{}
 		_0 = list[0]

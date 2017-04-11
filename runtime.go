@@ -6,6 +6,7 @@ import (
 	"math"
 	"path"
 	"reflect"
+
 	"runtime"
 	"strconv"
 	"sync"
@@ -152,6 +153,7 @@ func (self *_runtime) toObject(value Value) *_object {
 	case valueString:
 		return self.newString(value)
 	case valueNumber:
+
 		return self.newNumber(value)
 	case valueObject:
 		return value._object()
@@ -170,6 +172,7 @@ func (self *_runtime) objectCoerce(value Value) (*_object, error) {
 	case valueString:
 		return self.newString(value), nil
 	case valueNumber:
+
 		return self.newNumber(value), nil
 	case valueObject:
 		return value._object(), nil
@@ -178,6 +181,7 @@ func (self *_runtime) objectCoerce(value Value) (*_object, error) {
 }
 
 func checkObjectCoercible(rt *_runtime, value Value) {
+
 	isObject, mustCoerce := testObjectCoercible(value)
 	if !isObject && !mustCoerce {
 		panic(rt.panicTypeError())
@@ -210,6 +214,7 @@ func (self *_runtime) safeToValue(value interface{}) (Value, error) {
 // convertNumeric converts numeric parameter val from js to that of type t if it is safe to do so, otherwise it panics.
 // This allows literals (int64), bitwise values (int32) and the general form (float64) of javascript numerics to be passed as parameters to go functions easily.
 func (self *_runtime) convertNumeric(v Value, t reflect.Type) reflect.Value {
+
 	val := reflect.ValueOf(v.export())
 
 	if val.Kind() == t.Kind() {
@@ -289,6 +294,7 @@ var typeOfValue = reflect.TypeOf(Value{})
 // If the conversion fails due to overflow or type miss-match then it panics.
 // If no conversion is known then the original value is returned.
 func (self *_runtime) convertCallParameter(v Value, t reflect.Type) reflect.Value {
+
 	if t == typeOfValue {
 		return reflect.ValueOf(v)
 	}
@@ -341,10 +347,12 @@ func (self *_runtime) convertCallParameter(v Value, t reflect.Type) reflect.Valu
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
 		switch v.kind {
 		case valueNumber:
+
 			return self.convertNumeric(v, t)
 		}
 	case reflect.Slice:
 		if o := v._object(); o != nil {
+
 			if lv := o.get("length"); lv.IsNumber() {
 				l := lv.number().int64
 
@@ -422,9 +430,10 @@ func (self *_runtime) convertCallParameter(v Value, t reflect.Type) reflect.Valu
 		if o := v._object(); o != nil && o.class == "Function" {
 			return reflect.MakeFunc(t, func(args []reflect.Value) []reflect.Value {
 				l := make([]interface{}, len(args))
-				for i, a := range args {
-					if a.CanInterface() {
-						l[i] = a.Interface()
+				//for i, a := range args {
+				for i := 0; i < len(args); i++ {
+					if args[i].CanInterface() {
+						l[i] = args[i].Interface()
 					}
 				}
 
@@ -480,6 +489,7 @@ func (self *_runtime) convertCallParameter(v Value, t reflect.Type) reflect.Valu
 }
 
 func (self *_runtime) toValue(value interface{}) Value {
+
 	switch value := value.(type) {
 	case Value:
 		return value
@@ -511,6 +521,7 @@ func (self *_runtime) toValue(value interface{}) Value {
 		// This catch-all is ugly.
 	default:
 		{
+
 			value := reflect.ValueOf(value)
 
 			switch value.Kind() {
@@ -561,7 +572,9 @@ func (self *_runtime) toValue(value interface{}) Value {
 
 					callSlice := false
 
-					for i, a := range c.ArgumentList {
+					for i := 0; i < len(c.ArgumentList); i++ {
+						//for i, a := range c.ArgumentList {
+
 						var t reflect.Type
 
 						n := i
@@ -581,15 +594,16 @@ func (self *_runtime) toValue(value interface{}) Value {
 						// actual set of variadic Go arguments. if that succeeds, break
 						// out of the loop.
 						if typ.IsVariadic() && len(c.ArgumentList) == nargs && i == nargs-1 {
+
 							var v reflect.Value
-							if err := catchPanic(func() { v = self.convertCallParameter(a, typ.In(n)) }); err == nil {
+							if err := catchPanic(func() { v = self.convertCallParameter(c.ArgumentList[i], typ.In(n)) }); err == nil {
 								in[i] = v
 								callSlice = true
 								break
 							}
 						}
 
-						in[i] = self.convertCallParameter(a, t)
+						in[i] = self.convertCallParameter(c.ArgumentList[i], t)
 					}
 
 					var out []reflect.Value
@@ -605,9 +619,13 @@ func (self *_runtime) toValue(value interface{}) Value {
 					case 1:
 						return self.toValue(out[0].Interface())
 					default:
+
 						s := make([]interface{}, len(out))
-						for i, v := range out {
-							s[i] = self.toValue(v.Interface())
+
+						for i := 0; i < len(out); i++ {
+							//for i, v := range out {
+
+							s[i] = self.toValue(out[i].Interface())
 						}
 
 						return self.toValue(s)
@@ -659,23 +677,34 @@ func (self *_runtime) parseSource(src, sm interface{}) (*_nodeProgram, *ast.Prog
 }
 
 func (self *_runtime) cmpl_runOrEval(src, sm interface{}, eval bool) (Value, error) {
+
 	result := Value{}
-	cmpl_program, program, err := self.parseSource(src, sm)
-	if err != nil {
-		return result, err
-	}
-	if cmpl_program == nil {
-		cmpl_program = cmpl_parse(program)
-	}
-	err = catchPanic(func() {
-		result = self.cmpl_evaluate_nodeProgram(cmpl_program, eval)
-	})
-	switch result.kind {
-	case valueEmpty:
-		result = Value{}
-	case valueReference:
-		result = result.resolve()
-	}
+	var err error
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmpl_program, program, err := self.parseSource(src, sm)
+		if err != nil {
+			return // result, err
+		}
+
+		defer wg.Done()
+
+		if cmpl_program == nil {
+			cmpl_program = cmpl_parse(program)
+		}
+		err = catchPanic(func() {
+
+			result = self.cmpl_evaluate_nodeProgram(cmpl_program, eval)
+		})
+		switch result.kind {
+		case valueEmpty:
+			result = Value{}
+		case valueReference:
+			result = result.resolve()
+		}
+	}()
+	wg.Wait()
 	return result, err
 }
 

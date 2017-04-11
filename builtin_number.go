@@ -23,6 +23,7 @@ func builtinNewNumber(self *_object, argumentList []Value) Value {
 }
 
 func builtinNumber_toString(call FunctionCall) Value {
+
 	// Will throw a TypeError if ThisObject is not a Number
 	value := call.thisClassObject("Number").primitiveValue()
 	radix := 10

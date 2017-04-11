@@ -19,6 +19,7 @@ type _goMapObject struct {
 }
 
 func _newGoMapObject(value reflect.Value) *_goMapObject {
+
 	if value.Kind() != reflect.Map {
 		dbgf("%/panic//%@: %v != reflect.Map", value.Kind())
 	}

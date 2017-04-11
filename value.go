@@ -46,6 +46,7 @@ var (
 // This function will not work for advanced types (struct, map, slice/array, etc.) and
 // you should use Otto.ToValue instead.
 func ToValue(value interface{}) (Value, error) {
+
 	result := Value{}
 	err := catchPanic(func() {
 		result = toValue(value)
@@ -107,10 +108,12 @@ func (value Value) isCallable() bool {
 //
 func (value Value) Call(this Value, argumentList ...interface{}) (Value, error) {
 	result := Value{}
+
 	err := catchPanic(func() {
 		// FIXME
 		result = value.call(nil, this, argumentList...)
 	})
+
 	if !value.safe() {
 		value = Value{}
 	}
@@ -120,6 +123,7 @@ func (value Value) Call(this Value, argumentList ...interface{}) (Value, error) 
 func (value Value) call(rt *_runtime, this Value, argumentList ...interface{}) Value {
 	switch function := value.value.(type) {
 	case *_object:
+
 		return function.call(this, function.runtime.toValueArray(argumentList...), false, nativeFrame)
 	}
 	if rt == nil {
@@ -159,6 +163,7 @@ func (value Value) IsBoolean() bool {
 
 // IsNumber will return true if value is a number (primitive).
 func (value Value) IsNumber() bool {
+
 	return value.kind == valueNumber
 }
 
@@ -269,6 +274,7 @@ func (value Value) isError() bool {
 
 func toValue_reflectValuePanic(value interface{}, kind reflect.Kind) {
 	// FIXME?
+
 	switch kind {
 	case reflect.Struct:
 		panic(newError(nil, "TypeError", 0, "invalid value (struct): missing runtime: %v (%T)", value, value))
@@ -280,6 +286,7 @@ func toValue_reflectValuePanic(value interface{}, kind reflect.Kind) {
 }
 
 func toValue(value interface{}) Value {
+
 	switch value := value.(type) {
 	case Value:
 		return value
@@ -294,6 +301,7 @@ func toValue(value interface{}) Value {
 	case int32:
 		return Value{valueNumber, value}
 	case int64:
+
 		return Value{valueNumber, value}
 	case uint:
 		return Value{valueNumber, value}
@@ -308,6 +316,7 @@ func toValue(value interface{}) Value {
 	case float32:
 		return Value{valueNumber, float64(value)}
 	case float64:
+
 		return Value{valueNumber, value}
 	case []uint16:
 		return Value{valueString, value}
@@ -328,7 +337,9 @@ func toValue(value interface{}) Value {
 		// TODO Ugh.
 		return Value{}
 	case reflect.Value:
+
 		for value.Kind() == reflect.Ptr {
+
 			// We were given a pointer, so we'll drill down until we get a non-pointer
 			//
 			// These semantics might change if we want to start supporting pointers to values transparently
@@ -339,7 +350,9 @@ func toValue(value interface{}) Value {
 			}
 			value = value.Elem()
 		}
+
 		switch value.Kind() {
+
 		case reflect.Bool:
 			return Value{valueBoolean, bool(value.Bool())}
 		case reflect.Int:
@@ -372,6 +385,7 @@ func toValue(value interface{}) Value {
 			toValue_reflectValuePanic(value.Interface(), value.Kind())
 		}
 	default:
+
 		return toValue(reflect.ValueOf(value))
 	}
 	// FIXME?
@@ -407,6 +421,7 @@ func (value Value) ToBoolean() (bool, error) {
 }
 
 func (value Value) numberValue() Value {
+
 	if value.kind == valueNumber {
 		return value
 	}
@@ -421,6 +436,7 @@ func (value Value) numberValue() Value {
 //
 // If there is an error during the conversion process (like an uncaught exception), then the result will be 0 and an error.
 func (value Value) ToFloat() (float64, error) {
+
 	result := float64(0)
 	err := catchPanic(func() {
 		result = value.float64()
@@ -566,6 +582,7 @@ func FalseValue() Value {
 }
 
 func sameValue(x Value, y Value) bool {
+
 	if x.kind != y.kind {
 		return false
 	}
@@ -599,6 +616,7 @@ func sameValue(x Value, y Value) bool {
 }
 
 func strictEqualityComparison(x Value, y Value) bool {
+
 	if x.kind != y.kind {
 		return false
 	}
@@ -682,6 +700,7 @@ func (self Value) export() interface{} {
 			length := lengthValue.value.(uint32)
 			kind := reflect.Invalid
 			state := 0
+
 			var t reflect.Type
 			for index := uint32(0); index < length; index += 1 {
 				name := strconv.FormatInt(int64(index), 10)
@@ -740,6 +759,7 @@ func (self Value) export() interface{} {
 }
 
 func (self Value) evaluateBreakContinue(labels []string) _resultKind {
+
 	result := self.value.(_result)
 	if result.kind == resultBreak || result.kind == resultContinue {
 		for _, label := range labels {
@@ -752,9 +772,12 @@ func (self Value) evaluateBreakContinue(labels []string) _resultKind {
 }
 
 func (self Value) evaluateBreak(labels []string) _resultKind {
+
 	result := self.value.(_result)
 	if result.kind == resultBreak {
+
 		for _, label := range labels {
+
 			if label == result.target {
 				return result.kind
 			}
@@ -799,6 +822,7 @@ func (self Value) exportNative() interface{} {
 // Make a best effort to return a reflect.Value corresponding to reflect.Kind, but
 // fallback to just returning the Go value we have handy.
 func (value Value) toReflectValue(kind reflect.Kind) (reflect.Value, error) {
+
 	if kind != reflect.Float32 && kind != reflect.Float64 && kind != reflect.Interface {
 		switch value := value.value.(type) {
 		case float32:
@@ -945,6 +969,7 @@ func (value Value) toReflectValue(kind reflect.Kind) (reflect.Value, error) {
 }
 
 func stringToReflectValue(value string, kind reflect.Kind) (reflect.Value, error) {
+
 	switch kind {
 	case reflect.Bool:
 		value, err := strconv.ParseBool(value)

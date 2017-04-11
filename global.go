@@ -125,6 +125,7 @@ func (runtime *_runtime) newBoolean(value Value) *_object {
 }
 
 func (runtime *_runtime) newNumber(value Value) *_object {
+
 	self := runtime.newNumberObject(value)
 	self.prototype = runtime.global.NumberPrototype
 	return self
@@ -202,6 +203,7 @@ func (runtime *_runtime) newNativeFunction(name, file string, line int, _nativeF
 
 func (runtime *_runtime) newNodeFunction(node *_nodeFunctionLiteral, scopeEnvironment _stash) *_object {
 	// TODO Implement 13.2 fully
+
 	self := runtime.newNodeFunctionObject(node, scopeEnvironment)
 	self.prototype = runtime.global.FunctionPrototype
 	prototype := runtime.newObject()

@@ -15,6 +15,7 @@ var nullLiteral = &_nodeLiteral{value: nullValue}
 var emptyStatement = &_nodeEmptyStatement{}
 
 func (cmpl *_compiler) parseExpression(in ast.Expression) _nodeExpression {
+
 	if in == nil {
 		return nil
 	}
@@ -25,7 +26,9 @@ func (cmpl *_compiler) parseExpression(in ast.Expression) _nodeExpression {
 		out := &_nodeArrayLiteral{
 			value: make([]_nodeExpression, len(in.Value)),
 		}
+
 		for i, value := range in.Value {
+
 			out.value[i] = cmpl.parseExpression(value)
 		}
 		return out
@@ -38,6 +41,7 @@ func (cmpl *_compiler) parseExpression(in ast.Expression) _nodeExpression {
 		}
 
 	case *ast.BinaryExpression:
+
 		return &_nodeBinaryExpression{
 			operator:   in.Operator,
 			left:       cmpl.parseExpression(in.Left),
@@ -59,11 +63,13 @@ func (cmpl *_compiler) parseExpression(in ast.Expression) _nodeExpression {
 		}
 
 	case *ast.CallExpression:
+
 		out := &_nodeCallExpression{
 			callee:       cmpl.parseExpression(in.Callee),
 			argumentList: make([]_nodeExpression, len(in.ArgumentList)),
 		}
 		for i, value := range in.ArgumentList {
+
 			out.argumentList[i] = cmpl.parseExpression(value)
 		}
 		return out
@@ -86,6 +92,7 @@ func (cmpl *_compiler) parseExpression(in ast.Expression) _nodeExpression {
 		return nil
 
 	case *ast.FunctionLiteral:
+
 		name := ""
 		if in.Name != nil {
 			name = in.Name.Name
@@ -100,10 +107,12 @@ func (cmpl *_compiler) parseExpression(in ast.Expression) _nodeExpression {
 			list := in.ParameterList.List
 			out.parameterList = make([]string, len(list))
 			for i, value := range list {
+
 				out.parameterList[i] = value.Name
 			}
 		}
 		for _, value := range in.DeclarationList {
+
 			switch value := value.(type) {
 			case *ast.FunctionDeclaration:
 				out.functionList = append(out.functionList, cmpl.parseExpression(value.Function).(*_nodeFunctionLiteral))
@@ -129,6 +138,7 @@ func (cmpl *_compiler) parseExpression(in ast.Expression) _nodeExpression {
 			argumentList: make([]_nodeExpression, len(in.ArgumentList)),
 		}
 		for i, value := range in.ArgumentList {
+
 			out.argumentList[i] = cmpl.parseExpression(value)
 		}
 		return out
@@ -137,6 +147,7 @@ func (cmpl *_compiler) parseExpression(in ast.Expression) _nodeExpression {
 		return nullLiteral
 
 	case *ast.NumberLiteral:
+
 		return &_nodeLiteral{
 			value: toValue(in.Value),
 		}
@@ -146,6 +157,7 @@ func (cmpl *_compiler) parseExpression(in ast.Expression) _nodeExpression {
 			value: make([]_nodeProperty, len(in.Value)),
 		}
 		for i, value := range in.Value {
+
 			out.value[i] = _nodeProperty{
 				key:   value.Key,
 				kind:  value.Kind,
@@ -161,6 +173,7 @@ func (cmpl *_compiler) parseExpression(in ast.Expression) _nodeExpression {
 		}
 
 	case *ast.SequenceExpression:
+
 		out := &_nodeSequenceExpression{
 			sequence: make([]_nodeExpression, len(in.Sequence)),
 		}
@@ -208,6 +221,7 @@ func (cmpl *_compiler) parseStatement(in ast.Statement) _nodeStatement {
 			list: make([]_nodeStatement, len(in.List)),
 		}
 		for i, value := range in.List {
+
 			out.list[i] = cmpl.parseStatement(value)
 		}
 		return out
@@ -269,6 +283,7 @@ func (cmpl *_compiler) parseStatement(in ast.Statement) _nodeStatement {
 		} else {
 			out.body = append(out.body, body)
 		}
+
 		return out
 
 	case *ast.FunctionStatement:
@@ -332,6 +347,7 @@ func (cmpl *_compiler) parseStatement(in ast.Statement) _nodeStatement {
 			list: make([]_nodeExpression, len(in.List)),
 		}
 		for i, value := range in.List {
+
 			out.list[i] = cmpl.parseExpression(value)
 		}
 		return out
@@ -372,9 +388,11 @@ func (cmpl *_compiler) _parse(in *ast.Program) *_nodeProgram {
 		file: in.File,
 	}
 	for i, value := range in.Body {
+
 		out.body[i] = cmpl.parseStatement(value)
 	}
 	for _, value := range in.DeclarationList {
+
 		switch value := value.(type) {
 		case *ast.FunctionDeclaration:
 			out.functionList = append(out.functionList, cmpl.parseExpression(value.Function).(*_nodeFunctionLiteral))

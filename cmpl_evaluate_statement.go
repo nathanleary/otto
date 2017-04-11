@@ -3,16 +3,33 @@ package otto
 import (
 	"fmt"
 	"runtime"
+	"time"
 
 	"github.com/robertkrimen/otto/token"
 )
 
 func (self *_runtime) cmpl_evaluate_nodeStatement(node _nodeStatement) Value {
+
+	if self.otto.CmdNum == 0 {
+		self.otto.Time = time.Now()
+		self.otto.CmdNum++
+
+	} //else {
+	//	self.otto.CmdNum++
+	//}
+
 	// Allow interpreter interruption
 	// If the Interrupt channel is nil, then
 	// we avoid runtime.Gosched() overhead (if any)
 	// FIXME: Test this
+	//	wg := sync.WaitGroup{}
+	//	wg.Add(1)
+
+	//}()
+	//	wg.Wait()
+
 	if self.otto.Interrupt != nil {
+
 		runtime.Gosched()
 		select {
 		case value := <-self.otto.Interrupt:
@@ -28,8 +45,10 @@ func (self *_runtime) cmpl_evaluate_nodeStatement(node _nodeStatement) Value {
 		self.labels = nil
 
 		value := self.cmpl_evaluate_nodeStatementList(node.list)
+
 		switch value.kind {
 		case valueResult:
+
 			switch value.evaluateBreak(labels) {
 			case resultBreak:
 				return emptyValue
@@ -62,9 +81,11 @@ func (self *_runtime) cmpl_evaluate_nodeStatement(node _nodeStatement) Value {
 		return self.cmpl_evaluate_nodeExpression(node.expression)
 
 	case *_nodeForInStatement:
+
 		return self.cmpl_evaluate_nodeForInStatement(node)
 
 	case *_nodeForStatement:
+
 		return self.cmpl_evaluate_nodeForStatement(node)
 
 	case *_nodeIfStatement:
@@ -72,6 +93,7 @@ func (self *_runtime) cmpl_evaluate_nodeStatement(node _nodeStatement) Value {
 
 	case *_nodeLabelledStatement:
 		self.labels = append(self.labels, node.label)
+
 		defer func() {
 			if len(self.labels) > 0 {
 				self.labels = self.labels[:len(self.labels)-1] // Pop the label
@@ -83,6 +105,7 @@ func (self *_runtime) cmpl_evaluate_nodeStatement(node _nodeStatement) Value {
 
 	case *_nodeReturnStatement:
 		if node.argument != nil {
+
 			return toValue(newReturnResult(self.cmpl_evaluate_nodeExpression(node.argument).resolve()))
 		}
 		return toValue(newReturnResult(Value{}))
@@ -113,25 +136,48 @@ func (self *_runtime) cmpl_evaluate_nodeStatement(node _nodeStatement) Value {
 	}
 
 	panic(fmt.Errorf("Here be dragons: evaluate_nodeStatement(%T)", node))
+
 }
 
 func (self *_runtime) cmpl_evaluate_nodeStatementList(list []_nodeStatement) Value {
 	var result Value
-	for _, node := range list {
-		value := self.cmpl_evaluate_nodeStatement(node)
+	//for _, node := range list {
+	//wg := sync.WaitGroup{}
+	///wg.Add(len(list))
+	//	x := 0
+	for f := 0; f < len(list); f++ {
+
+		value := self.cmpl_evaluate_nodeStatement(list[f])
+
 		switch value.kind {
 		case valueResult:
+			//	x++
+
 			return value
 		case valueEmpty:
+			//x++
+
 		default:
+			//	x++
+			//go func(f int, value Value) {
+			//y := 0
+			//for y < x {
+			///	defer wg.Done()
+			//	y++
+			//}
+
 			// We have getValue here to (for example) trigger a
 			// ReferenceError (of the not defined variety)
 			// Not sure if this is the best way to error out early
 			// for such errors or if there is a better way
 			// TODO Do we still need this?
 			result = value.resolve()
+			//}(f, value)
 		}
+
 	}
+
+	//wg.Wait()
 	return result
 }
 
@@ -147,6 +193,7 @@ resultBreak:
 	for {
 		for _, node := range node.body {
 			value := self.cmpl_evaluate_nodeStatement(node)
+
 			switch value.kind {
 			case valueResult:
 				switch value.evaluateBreakContinue(labels) {
@@ -192,6 +239,7 @@ func (self *_runtime) cmpl_evaluate_nodeForInStatement(node *_nodeForInStatement
 	result := emptyValue
 	object := sourceObject
 	for object != nil {
+
 		enumerateValue := emptyValue
 		object.enumerate(false, func(name string) bool {
 			into := self.cmpl_evaluate_nodeExpression(into)
@@ -250,19 +298,49 @@ func (self *_runtime) cmpl_evaluate_nodeForStatement(node *_nodeForStatement) Va
 	}
 
 	result := emptyValue
+
 resultBreak:
+
 	for {
+		//
+		//tv := true
+
 		if test != nil {
+
 			testResult := self.cmpl_evaluate_nodeExpression(test)
 			testResultValue := testResult.resolve()
+
 			if testResultValue.bool() == false {
 				break
+				//tv = false
 			}
+			//}()
+			//	wg.Wait()
 		}
-		for _, node := range body {
-			value := self.cmpl_evaluate_nodeStatement(node)
-			switch value.kind {
-			case valueResult:
+
+		//if tv == false {
+		//	break
+		//}
+		//wg := sync.WaitGroup{}
+		//for _, node := range body {
+		for f := 0; f < len(body); f++ {
+
+			value := self.cmpl_evaluate_nodeStatement(body[f])
+
+			vk := value.kind
+			if vk != valueResult && vk != valueEmpty {
+
+				//go func(value Value) {
+				//wg.Add(1)
+				//defer wg.Done()
+				//print(1)
+				result = value
+				//}(value)
+
+			} else if valueResult == vk {
+				//switch vk {
+
+				//case valueResult:
 				switch value.evaluateBreakContinue(labels) {
 				case resultReturn:
 					return value
@@ -271,17 +349,28 @@ resultBreak:
 				case resultContinue:
 					goto resultContinue
 				}
-			case valueEmpty:
-			default:
-				result = value
+				//case valueEmpty:
+				//default:
+				//	result = value
 			}
+			// else if valueEmpty == vk {
+
+			// }
+
 		}
+
+		//wg.Wait()
+
 	resultContinue:
 		if update != nil {
+
 			updateResult := self.cmpl_evaluate_nodeExpression(update)
+
 			updateResult.resolve() // Side-effect trigger
 		}
+
 	}
+
 	return result
 }
 

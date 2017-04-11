@@ -9,14 +9,17 @@ import (
 )
 
 func (self *_runtime) cmpl_evaluate_nodeExpression(node _nodeExpression) Value {
+
 	// Allow interpreter interruption
 	// If the Interrupt channel is nil, then
 	// we avoid runtime.Gosched() overhead (if any)
 	// FIXME: Test this
 	if self.otto.Interrupt != nil {
+
 		runtime.Gosched()
 		select {
 		case value := <-self.otto.Interrupt:
+
 			value()
 		default:
 		}
@@ -25,9 +28,11 @@ func (self *_runtime) cmpl_evaluate_nodeExpression(node _nodeExpression) Value {
 	switch node := node.(type) {
 
 	case *_nodeArrayLiteral:
+
 		return self.cmpl_evaluate_nodeArrayLiteral(node)
 
 	case *_nodeAssignExpression:
+
 		return self.cmpl_evaluate_nodeAssignExpression(node)
 
 	case *_nodeBinaryExpression:
@@ -41,6 +46,7 @@ func (self *_runtime) cmpl_evaluate_nodeExpression(node _nodeExpression) Value {
 		return self.cmpl_evaluate_nodeBracketExpression(node)
 
 	case *_nodeCallExpression:
+
 		return self.cmpl_evaluate_nodeCallExpression(node, nil)
 
 	case *_nodeConditionalExpression:
@@ -50,6 +56,9 @@ func (self *_runtime) cmpl_evaluate_nodeExpression(node _nodeExpression) Value {
 		return self.cmpl_evaluate_nodeDotExpression(node)
 
 	case *_nodeFunctionLiteral:
+		//print(node.source)
+
+		self.otto.Hidden_global["_last_function_"] = node.source
 		var local = self.scope.lexical
 		if node.name != "" {
 			local = self.newDeclarationStash(local)
@@ -74,9 +83,11 @@ func (self *_runtime) cmpl_evaluate_nodeExpression(node _nodeExpression) Value {
 		return toValue(reference)
 
 	case *_nodeLiteral:
+
 		return node.value
 
 	case *_nodeNewExpression:
+
 		return self.cmpl_evaluate_nodeNewExpression(node)
 
 	case *_nodeObjectLiteral:
@@ -86,6 +97,7 @@ func (self *_runtime) cmpl_evaluate_nodeExpression(node _nodeExpression) Value {
 		return toValue_object(self._newRegExp(node.pattern, node.flags))
 
 	case *_nodeSequenceExpression:
+
 		return self.cmpl_evaluate_nodeSequenceExpression(node)
 
 	case *_nodeThisExpression:
@@ -95,6 +107,7 @@ func (self *_runtime) cmpl_evaluate_nodeExpression(node _nodeExpression) Value {
 		return self.cmpl_evaluate_nodeUnaryExpression(node)
 
 	case *_nodeVariableExpression:
+
 		return self.cmpl_evaluate_nodeVariableExpression(node)
 	}
 
@@ -103,13 +116,25 @@ func (self *_runtime) cmpl_evaluate_nodeExpression(node _nodeExpression) Value {
 
 func (self *_runtime) cmpl_evaluate_nodeArrayLiteral(node *_nodeArrayLiteral) Value {
 
-	valueArray := []Value{}
+	// valueArray := []Value{}
 
-	for _, node := range node.value {
+	// for _, node := range node.value {
+
+	// 	if node == nil {
+	// 		valueArray = append(valueArray, emptyValue)
+	// 	} else {
+	// 		valueArray = append(valueArray, self.cmpl_evaluate_nodeExpression(node).resolve())
+	// 	}
+	// }
+
+	valueArray := make([]Value, len(node.value))
+
+	for k := 0; k < len(node.value); k++ {
+
 		if node == nil {
-			valueArray = append(valueArray, emptyValue)
+			valueArray[k] = emptyValue
 		} else {
-			valueArray = append(valueArray, self.cmpl_evaluate_nodeExpression(node).resolve())
+			valueArray[k] = self.cmpl_evaluate_nodeExpression(node.value[k]).resolve()
 		}
 	}
 
@@ -189,9 +214,47 @@ func (self *_runtime) cmpl_evaluate_nodeCallExpression(node *_nodeCallExpression
 	if withArgumentList != nil {
 		argumentList = self.toValueArray(withArgumentList...)
 	} else {
-		for _, argumentNode := range node.argumentList {
-			argumentList = append(argumentList, self.cmpl_evaluate_nodeExpression(argumentNode).resolve())
+
+		argumentList = make([]Value, len(node.argumentList))
+		//for k, argumentNode := range node.argumentList {
+
+		//argumentList[0] = self.cmpl_evaluate_nodeExpression(node.argumentList[0])
+
+		for k := 0; k < len(argumentList); k++ {
+
+			argumentList[k] = self.cmpl_evaluate_nodeExpression(node.argumentList[k]).resolve()
+
 		}
+
+		//argumentList[len(argumentList)-1] = argumentList[len(argumentList)-1].resolve() //wg.Wait()
+		// wg := sync.WaitGroup{}
+		// //wg.Add(len(node.argumentList))
+
+		// // for _, _ = range node.argumentList {
+		// // 	go func() {
+		// // 		defer wg.Done()
+		// // 		argumentList = append(argumentList, Value{})
+		// // 	}()
+		// // }
+
+		// argumentList = make([]Value, len(node.argumentList))
+
+		// wg = sync.WaitGroup{}
+		// wg.Add(len(node.argumentList))
+		// for k, argumentNode := range node.argumentList {
+
+		// 	go func(k int, argumentNode _nodeExpression) {
+		// 		defer wg.Done()
+		// 		argumentList[k] = self.cmpl_evaluate_nodeExpression(argumentNode)
+		// 		//	argumentList = append(argumentList, self.cmpl_evaluate_nodeExpression(argumentNode))
+		// 	}(k, argumentNode)
+		// }
+
+		// wg.Wait()
+
+		// for k, _ := range node.argumentList {
+		// 	argumentList[k] = argumentList[k].resolve()
+		// }
 	}
 
 	rf := callee.reference()
@@ -268,9 +331,11 @@ func (self *_runtime) cmpl_evaluate_nodeNewExpression(node *_nodeNewExpression) 
 	rt := self
 	callee := self.cmpl_evaluate_nodeExpression(node.callee)
 
-	argumentList := []Value{}
-	for _, argumentNode := range node.argumentList {
-		argumentList = append(argumentList, self.cmpl_evaluate_nodeExpression(argumentNode).resolve())
+	argumentList := make([]Value, len(node.argumentList))
+
+	for k := 0; k < len(node.argumentList); k++ {
+		self.cmpl_evaluate_nodeExpression(node.argumentList[k]).resolve()
+		argumentList[k] = self.cmpl_evaluate_nodeExpression(node.argumentList[k]).resolve()
 	}
 
 	rf := callee.reference()
@@ -315,24 +380,26 @@ func (self *_runtime) cmpl_evaluate_nodeObjectLiteral(node *_nodeObjectLiteral) 
 
 	result := self.newObject()
 
-	for _, property := range node.value {
-		switch property.kind {
+	//for _, property := range node.value {
+	for k := 0; k < len(node.value); k++ {
+
+		switch node.value[k].kind {
 		case "value":
-			result.defineProperty(property.key, self.cmpl_evaluate_nodeExpression(property.value).resolve(), 0111, false)
+			result.defineProperty(node.value[k].key, self.cmpl_evaluate_nodeExpression(node.value[k].value).resolve(), 0111, false)
 		case "get":
-			getter := self.newNodeFunction(property.value.(*_nodeFunctionLiteral), self.scope.lexical)
+			getter := self.newNodeFunction(node.value[k].value.(*_nodeFunctionLiteral), self.scope.lexical)
 			descriptor := _property{}
 			descriptor.mode = 0211
 			descriptor.value = _propertyGetSet{getter, nil}
-			result.defineOwnProperty(property.key, descriptor, false)
+			result.defineOwnProperty(node.value[k].key, descriptor, false)
 		case "set":
-			setter := self.newNodeFunction(property.value.(*_nodeFunctionLiteral), self.scope.lexical)
+			setter := self.newNodeFunction(node.value[k].value.(*_nodeFunctionLiteral), self.scope.lexical)
 			descriptor := _property{}
 			descriptor.mode = 0211
 			descriptor.value = _propertyGetSet{nil, setter}
-			result.defineOwnProperty(property.key, descriptor, false)
+			result.defineOwnProperty(node.value[k].key, descriptor, false)
 		default:
-			panic(fmt.Errorf("Here be dragons: evaluate_nodeObjectLiteral: invalid property.Kind: %v", property.kind))
+			panic(fmt.Errorf("Here be dragons: evaluate_nodeObjectLiteral: invalid property.Kind: %v", node.value[k].kind))
 		}
 	}
 
@@ -341,10 +408,12 @@ func (self *_runtime) cmpl_evaluate_nodeObjectLiteral(node *_nodeObjectLiteral) 
 
 func (self *_runtime) cmpl_evaluate_nodeSequenceExpression(node *_nodeSequenceExpression) Value {
 	var result Value
-	for _, node := range node.sequence {
-		result = self.cmpl_evaluate_nodeExpression(node)
+
+	for k := 0; k < len(node.sequence); k++ {
+		result = self.cmpl_evaluate_nodeExpression(node.sequence[k])
 		result = result.resolve()
 	}
+
 	return result
 }
 
